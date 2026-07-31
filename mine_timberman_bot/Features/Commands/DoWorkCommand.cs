@@ -53,11 +53,6 @@ public class DoWorkCommand(
                 cancellationToken: cancellationToken);
             return;
         }
-        
-        logger.LogDebug(
-            "LastWorkTime={LastWorkTime}, Now={Now}",
-            userData.LastWorkTime,
-            DateTime.Now);
 
         if (userData.LastWorkTime.Date == DateTime.Today)
         {
@@ -70,8 +65,8 @@ public class DoWorkCommand(
         
         var boltCount = Random.Shared.Next(1, 5);
         var logsCount = Random.Shared.Next(1, 2);
-        var isLuckyDay = Random.Shared.NextDouble() < userData.Lucky;
-        var resultText = Random.Shared.NextDouble() < 0.15
+        var isLuckyDay = Random.Shared.Next(100) < userData.Force;
+        var resultText = isLuckyDay
             ? $"Твой крепиль нихуёво работнул и поставил {boltCount} болтов да ещё и въебал стоек {logsCount}!"
             : $"Твой крепиль работнул и поставил болтов - {boltCount}";
         userData.BoltsInWorkSession += boltCount;

@@ -6,13 +6,15 @@ using Telegram.Bot.Exceptions;
 
 namespace MineTimbermanBot.Features.Commands;
 
-public class CreateCharacterCommand(
+public class RestCommand(
     IUserSessionStore userSessionStore,
-    ILogger<CreateCharacterCommand> logger
+    ILogger<RestCommand> logger
 ) : IBotCommand
 {
-    public string Name => "create";
-    public string Description => "Создать персонажа";
+    public string Name => "rest";
+
+    public string Description => "Попытаться дремануть до приезда ИТР";
+    
     public async Task ExecuteAsync(BotCommandContext context, CancellationToken cancellationToken)
     {
         try
@@ -44,22 +46,47 @@ public class CreateCharacterCommand(
         
         if (userData.CharacterName is null)
         {
-            userData.CharacterName = user.Username;
-            userData.BoltsInWorkSession = Random.Shared.Next(1, 5);
-            userData.LogsInWorkSession = 0;
-            userData.Force = 10;
-            
             await context.BotClient.SendMessage(
                 context.Message.Chat,
-                "Ты создал сына маркшейдерши и МГВМ",
+                "А кому спать, РМУшники и не просыпались с начала смены? Создай крепиля сразу!",
                 cancellationToken: cancellationToken);
+            return;
         }
-        else
+        
+        if (userData.LastRestTime.Date == DateTime.Today)
         {
             await context.BotClient.SendMessage(
                 context.Message.Chat,
-                $"У тебя уже создан крепиль с именем {userData.CharacterName}",
+                "Нельзя спать когда рядом враги(с) Где-то ходят ИТРовцы!",
                 cancellationToken: cancellationToken);
+            return;
         }
+
+        var randomValue = userData.Force == 100 ? Random.Shared.Next(101) : Random.Shared.Next(100);
+        var isLuckyDay = randomValue < userData.Force;
+        var resultText = isLuckyDay
+            ? "Тебе удалось кемарнуть, ты чувствуешь силу, юный падаван."
+            : "Тебя разбудил начальник за спиной у которого стоял ТБшник. Возможно тебя ждёт сЭкс...";
+
+        if (isLuckyDay)
+        {
+            userData.Force += 10;
+        }
+        else
+        {
+            userData.Force -= Math.Max(1, userData.Force / 4);
+        }
+
+        if (userData.Force <= 0)
+        {
+            userData.Force = 1;
+        }
+
+        userData.LastRestTime = DateTime.Today;
+        
+        await context.BotClient.SendMessage(
+            context.Message.Chat,
+            resultText + $"\nТеперь твоя сила равна {userData.Force}%",
+            cancellationToken: cancellationToken);
     }
 }

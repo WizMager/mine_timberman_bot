@@ -22,6 +22,7 @@ public sealed class HelpCommand : IBotCommand
             /play — выбрать сторону с помощью inline-кнопок
             /create - создать крепиля
             /work - работнуть
+            /rest - попытаться кемарнуть до приезда ИТР
             """;
 
         await context.BotClient.SendMessage(

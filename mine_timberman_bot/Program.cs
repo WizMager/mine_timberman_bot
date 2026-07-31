@@ -54,6 +54,7 @@ builder.Services.AddScoped<IBotCommand, HelpCommand>();
 builder.Services.AddScoped<IBotCommand, PlayCommand>();
 builder.Services.AddScoped<IBotCommand, CreateCharacterCommand>();
 builder.Services.AddScoped<IBotCommand, DoWorkCommand>();
+builder.Services.AddScoped<IBotCommand, RestCommand>();
 
 builder.Services.AddScoped<ICallbackHandler, SideCallbackHandler>();
 
