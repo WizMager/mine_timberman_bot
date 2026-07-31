@@ -33,10 +33,6 @@ public sealed class CommandDispatcher
 
         if (!TryParseCommand(message.Text, out var commandName, out var arguments))
         {
-            await botClient.SendMessage(
-                message.Chat,
-                "Я обрабатываю команды. Отправьте /help, чтобы увидеть список.",
-                cancellationToken: cancellationToken);
             return;
         }
 
