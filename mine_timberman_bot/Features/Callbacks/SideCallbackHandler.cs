@@ -15,7 +15,7 @@ public sealed class SideCallbackHandler : ICallbackHandler
 
         lock (context.Session)
         {
-            if (context.Session.State != UserSessionStates.ChoosingSide)
+            if (context.Session.State != UserSessionStates.Choosing)
             {
                 result = new CallbackHandleResult(
                     "Это меню уже неактуально. Отправьте /play, чтобы начать заново.");

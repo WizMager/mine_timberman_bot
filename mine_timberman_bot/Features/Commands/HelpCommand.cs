@@ -20,6 +20,8 @@ public sealed class HelpCommand : IBotCommand
             /help — показать эту справку
             /echo <текст> — повторить переданный текст
             /play — выбрать сторону с помощью inline-кнопок
+            /create - создать крепиля
+            /work - работнуть
             """;
 
         await context.BotClient.SendMessage(

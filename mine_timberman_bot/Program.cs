@@ -48,9 +48,13 @@ builder.Services.AddHostedService<TelegramBotWorker>();
 builder.Services.AddScoped<UpdateDispatcher>();
 builder.Services.AddScoped<CommandDispatcher>();
 builder.Services.AddScoped<CallbackDispatcher>();
+
 builder.Services.AddScoped<IBotCommand, StartCommand>();
 builder.Services.AddScoped<IBotCommand, HelpCommand>();
 builder.Services.AddScoped<IBotCommand, PlayCommand>();
+builder.Services.AddScoped<IBotCommand, CreateCharacterCommand>();
+builder.Services.AddScoped<IBotCommand, DoWorkCommand>();
+
 builder.Services.AddScoped<ICallbackHandler, SideCallbackHandler>();
 
 await builder.Build().RunAsync();

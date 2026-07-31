@@ -49,7 +49,7 @@ public sealed class PlayCommand(
 
         lock (session)
         {
-            session.State = UserSessionStates.ChoosingSide;
+            session.State = UserSessionStates.Choosing;
             session.Score = 0;
             session.SelectedSide = null;
         }
