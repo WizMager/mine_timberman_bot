@@ -20,7 +20,7 @@ public sealed class StartCommand : IBotCommand
 
         await context.BotClient.SendMessage(
             context.Message.Chat,
-            $"{greeting}\n\nЯ — стартовый каркас Telegram-бота. Используйте /help.",
+            $"{greeting}\n\nЭто симулятор креильщика. Используйте /help, чтобы узнать какие есть команды, либо используй кнопку команд для их вызова.",
             cancellationToken: cancellationToken);
     }
 }
