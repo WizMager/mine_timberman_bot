@@ -23,6 +23,7 @@ public sealed class HelpCommand : IBotCommand
             /create - создать крепиля
             /work - работнуть
             /rest - попытаться кемарнуть до приезда ИТР
+            /stats - узнать характеристики крепиля
             """;
 
         await context.BotClient.SendMessage(
