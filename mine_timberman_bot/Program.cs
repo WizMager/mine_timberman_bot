@@ -61,6 +61,7 @@ builder.Services.AddScoped<IBotCommand, DoWorkCommand>();
 builder.Services.AddScoped<IBotCommand, RestCommand>();
 builder.Services.AddScoped<IBotCommand, StatsCommand>();
 builder.Services.AddScoped<IBotCommand, FightCommand>();
+builder.Services.AddScoped<IBotCommand, RenameCommand>();
 
 builder.Services.AddScoped<ICallbackHandler, FightCallbackHandler>();
 
