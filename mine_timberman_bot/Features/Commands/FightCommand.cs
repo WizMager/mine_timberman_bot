@@ -4,6 +4,7 @@ using MineTimbermanBot.Application.Duels;
 using MineTimbermanBot.Application.Sessions;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
+using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
@@ -12,47 +13,33 @@ namespace MineTimbermanBot.Features.Commands;
 public sealed class FightCommand(
     IUserSessionStore sessionStore,
     IDuelStore duelStore,
-    ILogger<FightCommand> logger) : IBotCommand
+    ILogger<FightCommand> logger
+) : BotCommandBase(logger, sessionStore)
 {
-    public string Name => "fight";
+    public override string Name => "fight";
 
-    public string Description => "Вызвать случайного крепиля на сражение на \"шпагах\" на этом участке(в группе)";
+    public override string Description => "Вызвать случайного крепиля на сражение на \"шпагах\" на этом участке(в группе)";
 
-    public async Task ExecuteAsync(BotCommandContext context, CancellationToken cancellationToken)
+    protected override async Task<bool> BeforeExecuteAsync(BotCommandContext context, CancellationToken cancellationToken)
     {
         var chat = context.Message.Chat;
-        if (chat.Type is not (ChatType.Group or ChatType.Supergroup))
+        if (chat.Type is ChatType.Group or ChatType.Supergroup)
         {
-            await context.BotClient.SendMessage(
-                chat,
-                "Сам с собой будешь сражаться? Это работает только в группе",
-                cancellationToken: cancellationToken);
-            return;
+            return true;
         }
 
-        if (context.Message.From is not { } user)
-        {
-            await context.BotClient.SendMessage(
-                chat,
-                "Не удалось определить пользователя.",
-                cancellationToken: cancellationToken);
-            return;
-        }
+        await context.BotClient.SendMessage(
+            chat,
+            "Сам с собой будешь сражаться? Это работает только в группе",
+            cancellationToken: cancellationToken);
+        return false;
+    }
 
-        try
-        {
-            await context.BotClient.DeleteMessage(chat, context.Message.Id, cancellationToken);
-        }
-        catch (ApiRequestException exception)
-        {
-            logger.LogDebug(
-                exception,
-                "Could not delete message {MessageId} in chat {ChatId}",
-                context.Message.Id,
-                chat.Id);
-        }
+    protected override async Task ExecuteCoreAsync(BotCommandContext context, User user, CancellationToken cancellationToken)
+    {
+        var chat = context.Message.Chat;
 
-        if (!sessionStore.TryGet(user.Id, out var challenger) || challenger.CharacterName is null || !sessionStore.IsCharacterInChat(chat.Id, user.Id))
+        if (!SessionStore.TryGet(user.Id, out var challenger) || challenger.CharacterName is null || !SessionStore.IsCharacterInChat(chat.Id, user.Id))
         {
             await context.BotClient.SendMessage(
                 chat,
@@ -70,12 +57,12 @@ public sealed class FightCommand(
             return;
         }
 
-        var opponentId = sessionStore.TryPickRandomOpponent(
+        var opponentId = SessionStore.TryPickRandomOpponent(
             chat.Id,
             user.Id,
             busyUserId => duelStore.FindByUser(busyUserId) is not null);
 
-        if (opponentId is null || !sessionStore.TryGet(opponentId.Value, out var opponent) || opponent.CharacterName is null)
+        if (opponentId is null || !SessionStore.TryGet(opponentId.Value, out var opponent) || opponent.CharacterName is null)
         {
             await context.BotClient.SendMessage(
                 chat,

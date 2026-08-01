@@ -1,58 +1,25 @@
-﻿using System.Windows.Input;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using MineTimbermanBot.Application.Commands;
 using MineTimbermanBot.Application.Sessions;
 using Telegram.Bot;
-using Telegram.Bot.Exceptions;
+using Telegram.Bot.Types;
 
 namespace MineTimbermanBot.Features.Commands;
 
 public class DoWorkCommand(
     IUserSessionStore userSessionStore,
     ILogger<DoWorkCommand> logger
-) : IBotCommand
+) : BotCommandBase(logger, userSessionStore)
 {
-    public string Name => "work";
+    public override string Name => "work";
 
-    public string Description => "Хорошенько крепануть сегодня";
-    
-    public async Task ExecuteAsync(BotCommandContext context, CancellationToken cancellationToken)
+    public override string Description => "Хорошенько крепануть сегодня";
+
+    protected override string MissingCharacterMessage => "А кому работать, главному инженеру чтоль? Создай крепиля сразу!";
+
+    protected override async Task ExecuteCoreAsync(BotCommandContext context, User user, CancellationToken cancellationToken)
     {
-        try
-        {
-            await context.BotClient.DeleteMessage(
-                context.Message.Chat,
-                context.Message.Id,
-                cancellationToken);
-        }
-        catch (ApiRequestException exception)
-        {
-            logger.LogDebug(
-                exception,
-                "Could not delete message {MessageId} in chat {ChatId}",
-                context.Message.Id,
-                context.Message.Chat.Id);
-        }
-        
-        if (context.Message.From is not { } user)
-        {
-            await context.BotClient.SendMessage(
-                context.Message.Chat,
-                "Не удалось определить пользователя для игровой сессии.",
-                cancellationToken: cancellationToken);
-            return;
-        }
-        
-        var userData = userSessionStore.GetOrCreate(user.Id);
-
-        if (userData.CharacterName is null)
-        {
-            await context.BotClient.SendMessage(
-                context.Message.Chat,
-                "А кому работать, главному инженеру чтоль? Создай крепиля сразу!",
-                cancellationToken: cancellationToken);
-            return;
-        }
+        var userData = SessionStore.GetOrCreate(user.Id);
 
         if (userData.LastWorkTime.Date == DateTime.Today)
         {
@@ -62,7 +29,7 @@ public class DoWorkCommand(
                 cancellationToken: cancellationToken);
             return;
         }
-        
+
         var boltCount = Random.Shared.Next(1, 5);
         var logsCount = Random.Shared.Next(1, 2);
         var isLuckyDay = Random.Shared.Next(100) < userData.Force;
@@ -71,12 +38,12 @@ public class DoWorkCommand(
             : $"Твой крепиль работнул и поставил болтов - {boltCount}";
         userData.BoltsInWorkSession += boltCount;
         userData.LastWorkTime = DateTime.Now;
-        
+
         if (isLuckyDay)
         {
             userData.LogsInWorkSession += logsCount;
         }
-        
+
         await context.BotClient.SendMessage(
             context.Message.Chat,
             resultText,

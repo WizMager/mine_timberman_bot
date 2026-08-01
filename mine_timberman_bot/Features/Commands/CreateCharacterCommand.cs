@@ -2,7 +2,7 @@
 using MineTimbermanBot.Application.Commands;
 using MineTimbermanBot.Application.Sessions;
 using Telegram.Bot;
-using Telegram.Bot.Exceptions;
+using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
 namespace MineTimbermanBot.Features.Commands;
@@ -10,40 +10,15 @@ namespace MineTimbermanBot.Features.Commands;
 public class CreateCharacterCommand(
     IUserSessionStore userSessionStore,
     ILogger<CreateCharacterCommand> logger
-) : IBotCommand
+) : BotCommandBase(logger, userSessionStore)
 {
-    public string Name => "create";
-    
-    public string Description => "Создать персонажа";
+    public override string Name => "create";
 
-    public async Task ExecuteAsync(BotCommandContext context, CancellationToken cancellationToken)
+    public override string Description => "Создать персонажа";
+
+    protected override async Task ExecuteCoreAsync(BotCommandContext context, User user, CancellationToken cancellationToken)
     {
-        try
-        {
-            await context.BotClient.DeleteMessage(
-                context.Message.Chat,
-                context.Message.Id,
-                cancellationToken);
-        }
-        catch (ApiRequestException exception)
-        {
-            logger.LogDebug(
-                exception,
-                "Could not delete message {MessageId} in chat {ChatId}",
-                context.Message.Id,
-                context.Message.Chat.Id);
-        }
-
-        if (context.Message.From is not { } user)
-        {
-            await context.BotClient.SendMessage(
-                context.Message.Chat,
-                "Не удалось определить пользователя для игровой сессии.",
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        var userData = userSessionStore.GetOrCreate(user.Id);
+        var userData = SessionStore.GetOrCreate(user.Id);
         var chat = context.Message.Chat;
 
         if (userData.CharacterName is null)
@@ -55,7 +30,7 @@ public class CreateCharacterCommand(
 
             if (chat.Type is ChatType.Group or ChatType.Supergroup)
             {
-                userSessionStore.RegisterCharacterInChat(chat.Id, user.Id);
+                SessionStore.RegisterCharacterInChat(chat.Id, user.Id);
             }
 
             await context.BotClient.SendMessage(

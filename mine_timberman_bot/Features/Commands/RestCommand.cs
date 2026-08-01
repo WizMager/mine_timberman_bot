@@ -2,57 +2,26 @@
 using MineTimbermanBot.Application.Commands;
 using MineTimbermanBot.Application.Sessions;
 using Telegram.Bot;
-using Telegram.Bot.Exceptions;
+using Telegram.Bot.Types;
 
 namespace MineTimbermanBot.Features.Commands;
 
 public class RestCommand(
     IUserSessionStore userSessionStore,
     ILogger<RestCommand> logger
-) : IBotCommand
+) : BotCommandBase(logger, userSessionStore)
 {
-    public string Name => "rest";
+    public override string Name => "rest";
 
-    public string Description => "Попытаться дремануть до приезда ИТР";
-    
-    public async Task ExecuteAsync(BotCommandContext context, CancellationToken cancellationToken)
+    public override string Description => "Попытаться дремануть до приезда ИТР";
+
+    protected override string MissingCharacterMessage { get; } =
+        "А кому спать, РМУшники и не просыпались с начала смены? Создай крепиля сразу!";
+
+    protected override async Task ExecuteCoreAsync(BotCommandContext context, User user, CancellationToken cancellationToken)
     {
-        try
-        {
-            await context.BotClient.DeleteMessage(
-                context.Message.Chat,
-                context.Message.Id,
-                cancellationToken);
-        }
-        catch (ApiRequestException exception)
-        {
-            logger.LogDebug(
-                exception,
-                "Could not delete message {MessageId} in chat {ChatId}",
-                context.Message.Id,
-                context.Message.Chat.Id);
-        }
-        
-        if (context.Message.From is not { } user)
-        {
-            await context.BotClient.SendMessage(
-                context.Message.Chat,
-                "Не удалось определить пользователя для игровой сессии.",
-                cancellationToken: cancellationToken);
-            return;
-        }
-        
-        var userData = userSessionStore.GetOrCreate(user.Id);
-        
-        if (userData.CharacterName is null)
-        {
-            await context.BotClient.SendMessage(
-                context.Message.Chat,
-                "А кому спать, РМУшники и не просыпались с начала смены? Создай крепиля сразу!",
-                cancellationToken: cancellationToken);
-            return;
-        }
-        
+        var userData = SessionStore.GetOrCreate(user.Id);
+
         if (userData.LastRestTime.Date == DateTime.Today)
         {
             await context.BotClient.SendMessage(
@@ -83,7 +52,7 @@ public class RestCommand(
         }
 
         userData.LastRestTime = DateTime.Today;
-        
+
         await context.BotClient.SendMessage(
             context.Message.Chat,
             resultText + $"\nТеперь твоя сила равна {userData.Force}%",

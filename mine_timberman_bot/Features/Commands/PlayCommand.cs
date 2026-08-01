@@ -2,50 +2,23 @@ using Microsoft.Extensions.Logging;
 using MineTimbermanBot.Application.Commands;
 using MineTimbermanBot.Application.Sessions;
 using Telegram.Bot;
-using Telegram.Bot.Exceptions;
+using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace MineTimbermanBot.Features.Commands;
 
 public sealed class PlayCommand(
     IUserSessionStore sessionStore,
-    ILogger<PlayCommand> logger) : IBotCommand
+    ILogger<PlayCommand> logger
+) : BotCommandBase(logger, sessionStore)
 {
-    public string Name => "play";
+    public override string Name => "play";
 
-    public string Description => "Начать учебную игру";
+    public override string Description => "Начать учебную игру";
 
-    public async Task ExecuteAsync(
-        BotCommandContext context,
-        CancellationToken cancellationToken)
+    protected override async Task ExecuteCoreAsync(BotCommandContext context, User user, CancellationToken cancellationToken)
     {
-        if (context.Message.From is not { } user)
-        {
-            await context.BotClient.SendMessage(
-                context.Message.Chat,
-                "Не удалось определить пользователя для игровой сессии.",
-                cancellationToken: cancellationToken);
-            return;
-        }
-
-        try
-        {
-            await context.BotClient.DeleteMessage(
-                context.Message.Chat,
-                context.Message.Id,
-                cancellationToken);
-        }
-        catch (ApiRequestException exception)
-        {
-            // В группе для удаления чужих сообщений боту могут понадобиться права администратора.
-            logger.LogDebug(
-                exception,
-                "Could not delete /play message {MessageId} in chat {ChatId}",
-                context.Message.Id,
-                context.Message.Chat.Id);
-        }
-
-        var session = sessionStore.GetOrCreate(user.Id);
+        var session = SessionStore.GetOrCreate(user.Id);
 
         lock (session)
         {
