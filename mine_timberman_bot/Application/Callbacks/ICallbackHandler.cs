@@ -6,15 +6,9 @@ namespace MineTimbermanBot.Application.Callbacks;
 
 public interface ICallbackHandler
 {
-    /// <summary>
-    /// Префикс callback_data до первого ':'.
-    /// Например, для "side:left" префикс равен "side".
-    /// </summary>
     string Prefix { get; }
 
-    Task<CallbackHandleResult> HandleAsync(
-        BotCallbackContext context,
-        CancellationToken cancellationToken);
+    Task<CallbackHandleResult> HandleAsync(BotCallbackContext context,CancellationToken cancellationToken);
 }
 
 public sealed record BotCallbackContext(
@@ -24,4 +18,4 @@ public sealed record BotCallbackContext(
     string Data,
     string Payload);
 
-public sealed record CallbackHandleResult(string ResponseText, bool DeletePanel = true);
+public sealed record CallbackHandleResult(string? ToastText = null);

@@ -15,59 +15,37 @@ public sealed class CallbackDispatcher
     public CallbackDispatcher(
         IEnumerable<ICallbackHandler> handlers,
         IUserSessionStore sessionStore,
-        ILogger<CallbackDispatcher> logger)
+        ILogger<CallbackDispatcher> logger
+    )
     {
-        _handlers = handlers.ToDictionary(
-            handler => NormalizePrefix(handler.Prefix),
-            StringComparer.OrdinalIgnoreCase);
+        _handlers = handlers.ToDictionary(handler => NormalizePrefix(handler.Prefix), StringComparer.OrdinalIgnoreCase);
         _sessionStore = sessionStore;
         _logger = logger;
     }
 
-    public async Task DispatchAsync(
-        ITelegramBotClient botClient,
-        CallbackQuery callback,
-        CancellationToken cancellationToken)
+    public async Task DispatchAsync(ITelegramBotClient botClient, CallbackQuery callback, CancellationToken cancellationToken)
     {
-        // Telegram показывает индикатор загрузки, пока callback не подтверждён.
-        await botClient.AnswerCallbackQuery(
-            callback.Id,
-            cancellationToken: cancellationToken);
-
-        if (!TryParseCallbackData(callback.Data, out var prefix, out var payload))
+        if (!TryParseCallbackData(callback.Data, out var prefix, out var payload) || !_handlers.TryGetValue(prefix, out var handler))
         {
-            await SendResponseAsync(
-                botClient,
-                callback,
-                "Эта кнопка больше не поддерживается. Отправьте /play и выберите снова.",
-                deletePanel: true,
-                cancellationToken);
-            return;
-        }
+            if (prefix.Length > 0 && !_handlers.ContainsKey(prefix))
+            {
+                _logger.LogInformation(
+                    "Unknown callback prefix {CallbackPrefix} from user {UserId}",
+                    prefix,
+                    callback.From.Id);
+            }
 
-        if (!_handlers.TryGetValue(prefix, out var handler))
-        {
-            _logger.LogInformation(
-                "Unknown callback prefix {CallbackPrefix} from user {UserId}",
-                prefix,
-                callback.From.Id);
+            await botClient.AnswerCallbackQuery(
+                callback.Id,
+                "Эта кнопка больше не поддерживается.",
+                cancellationToken: cancellationToken);
 
-            await SendResponseAsync(
-                botClient,
-                callback,
-                "Эта кнопка больше не поддерживается. Отправьте /play и выберите снова.",
-                deletePanel: true,
-                cancellationToken);
+            await TryDeletePanelAsync(botClient, callback, cancellationToken);
             return;
         }
 
         var session = _sessionStore.GetOrCreate(callback.From.Id);
-        var context = new BotCallbackContext(
-            botClient,
-            callback,
-            session,
-            callback.Data!,
-            payload);
+        var context = new BotCallbackContext(botClient, callback, session, callback.Data!, payload);
 
         var result = await handler.HandleAsync(context, cancellationToken);
 
@@ -78,46 +56,34 @@ public sealed class CallbackDispatcher
             callback.From.Id,
             session.State);
 
-        await SendResponseAsync(
-            botClient,
-            callback,
-            result.ResponseText,
-            result.DeletePanel,
-            cancellationToken);
+        await botClient.AnswerCallbackQuery(
+            callback.Id,
+            result.ToastText,
+            cancellationToken: cancellationToken);
     }
 
-    private async Task SendResponseAsync(
-        ITelegramBotClient botClient,
-        CallbackQuery callback,
-        string responseText,
-        bool deletePanel,
-        CancellationToken cancellationToken)
+    private async Task TryDeletePanelAsync(ITelegramBotClient botClient, CallbackQuery callback, CancellationToken cancellationToken)
     {
-        var chatId = callback.Message?.Chat.Id ?? callback.From.Id;
-
-        if (deletePanel && callback.Message is { } panelMessage)
+        if (callback.Message is not { } panelMessage)
         {
-            try
-            {
-                await botClient.DeleteMessage(
-                    panelMessage.Chat,
-                    panelMessage.Id,
-                    cancellationToken);
-            }
-            catch (ApiRequestException exception)
-            {
-                _logger.LogDebug(
-                    exception,
-                    "Could not delete callback panel {MessageId} in chat {ChatId}",
-                    panelMessage.Id,
-                    panelMessage.Chat.Id);
-            }
+            return;
         }
 
-        await botClient.SendMessage(
-            chatId,
-            responseText,
-            cancellationToken: cancellationToken);
+        try
+        {
+            await botClient.DeleteMessage(
+                panelMessage.Chat,
+                panelMessage.Id,
+                cancellationToken);
+        }
+        catch (ApiRequestException exception)
+        {
+            _logger.LogDebug(
+                exception,
+                "Could not delete callback panel {MessageId} in chat {ChatId}",
+                panelMessage.Id,
+                panelMessage.Chat.Id);
+        }
     }
 
     private static string NormalizePrefix(string prefix)
@@ -133,10 +99,7 @@ public sealed class CallbackDispatcher
         return normalizedPrefix;
     }
 
-    private static bool TryParseCallbackData(
-        string? data,
-        out string prefix,
-        out string payload)
+    private static bool TryParseCallbackData(string? data, out string prefix, out string payload)
     {
         prefix = string.Empty;
         payload = string.Empty;
@@ -154,6 +117,7 @@ public sealed class CallbackDispatcher
 
         prefix = data[..separatorIndex];
         payload = data[(separatorIndex + 1)..];
+
         return prefix.Length > 0;
     }
 }

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using MineTimbermanBot.Application;
 using MineTimbermanBot.Application.Callbacks;
 using MineTimbermanBot.Application.Commands;
+using MineTimbermanBot.Application.Duels;
 using MineTimbermanBot.Application.Sessions;
 using MineTimbermanBot.Configuration;
 using MineTimbermanBot.Features.Callbacks;
@@ -43,7 +44,10 @@ builder.Services.AddSingleton<ITelegramBotClient>(serviceProvider =>
 
 builder.Services.AddSingleton<IUpdateHandler, TelegramUpdateHandler>();
 builder.Services.AddSingleton<IUserSessionStore, InMemoryUserSessionStore>();
+builder.Services.AddSingleton<IDuelStore, InMemoryDuelStore>();
+builder.Services.AddSingleton<DuelResolver>();
 builder.Services.AddHostedService<TelegramBotWorker>();
+builder.Services.AddHostedService<DuelTimeoutWorker>();
 
 builder.Services.AddScoped<UpdateDispatcher>();
 builder.Services.AddScoped<CommandDispatcher>();
@@ -56,7 +60,8 @@ builder.Services.AddScoped<IBotCommand, CreateCharacterCommand>();
 builder.Services.AddScoped<IBotCommand, DoWorkCommand>();
 builder.Services.AddScoped<IBotCommand, RestCommand>();
 builder.Services.AddScoped<IBotCommand, StatsCommand>();
+builder.Services.AddScoped<IBotCommand, FightCommand>();
 
-builder.Services.AddScoped<ICallbackHandler, SideCallbackHandler>();
+builder.Services.AddScoped<ICallbackHandler, FightCallbackHandler>();
 
 await builder.Build().RunAsync();
