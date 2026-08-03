@@ -18,14 +18,10 @@ public sealed class PlayCommand(
 
     protected override async Task ExecuteCoreAsync(BotCommandContext context, User user, CancellationToken cancellationToken)
     {
-        var session = SessionStore.GetOrCreate(user.Id);
-
-        lock (session)
-        {
-            session.State = UserSessionStates.Choosing;
-            session.Score = 0;
-            session.SelectedSide = null;
-        }
+        var session = await SessionStore.GetOrCreateAsync(user.Id, cancellationToken);
+        session.State = UserSessionStates.Choosing;
+        session.Score = 0;
+        session.SelectedSide = null;
 
         var keyboard = new InlineKeyboardMarkup(new[]
         {

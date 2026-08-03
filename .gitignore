@@ -6,3 +6,7 @@
 *.user
 .env
 appsettings.Local.json
+**/data/
+*.db
+*.db-shm
+*.db-wal

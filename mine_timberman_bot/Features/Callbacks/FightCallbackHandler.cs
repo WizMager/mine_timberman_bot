@@ -15,50 +15,31 @@ public sealed class FightCallbackHandler(IDuelStore duelStore, DuelResolver duel
             return new CallbackHandleResult("Кнопка устарела. Жди новый бой.");
         }
 
-        var duel = duelStore.Get(parts[0]);
+        var userId = context.Callback.From.Id;
+        var duel = await duelStore.TrySetChoiceAsync(parts[0], userId, choice, auto: false, cancellationToken);
         if (duel is null)
         {
-            return new CallbackHandleResult("Этот бой уже закончился.");
-        }
-
-        var userId = context.Callback.From.Id;
-        if (!duel.IsParticipant(userId))
-        {
-            return new CallbackHandleResult("Это не твой бой.");
-        }
-
-        bool shouldResolve;
-        int? ownDmMessageId;
-
-        lock (duel.Sync)
-        {
-            if (userId == duel.ChallengerUserId)
+            var existing = await duelStore.GetAsync(parts[0], cancellationToken);
+            if (existing is null)
             {
-                if (duel.ChallengerChoice is not null)
-                {
-                    return new CallbackHandleResult("Ты уже сходил.");
-                }
-
-                duel.ChallengerChoice = choice;
-                ownDmMessageId = duel.ChallengerDmMessageId;
-            }
-            else
-            {
-                if (duel.OpponentChoice is not null)
-                {
-                    return new CallbackHandleResult("Ты уже сходил.");
-                }
-
-                duel.OpponentChoice = choice;
-                ownDmMessageId = duel.OpponentDmMessageId;
+                return new CallbackHandleResult("Этот бой уже закончился.");
             }
 
-            shouldResolve = duel.BothChosen;
+            if (!existing.IsParticipant(userId))
+            {
+                return new CallbackHandleResult("Это не твой бой.");
+            }
+
+            return new CallbackHandleResult("Ты уже сходил.");
         }
+
+        var ownDmMessageId = userId == duel.ChallengerUserId
+            ? duel.ChallengerDmMessageId
+            : duel.OpponentDmMessageId;
 
         await duelResolver.RemoveChoiceKeyboardAsync(userId, ownDmMessageId, cancellationToken);
 
-        if (shouldResolve)
+        if (duel.BothChosen)
         {
             await duelResolver.ResolveAsync(duel, cancellationToken);
         }

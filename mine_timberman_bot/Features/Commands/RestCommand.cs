@@ -20,7 +20,7 @@ public class RestCommand(
 
     protected override async Task ExecuteCoreAsync(BotCommandContext context, User user, CancellationToken cancellationToken)
     {
-        var userData = SessionStore.GetOrCreate(user.Id);
+        var userData = await SessionStore.GetOrCreateAsync(user.Id, cancellationToken);
 
         if (userData.LastRestTime.Date == DateTime.Today)
         {

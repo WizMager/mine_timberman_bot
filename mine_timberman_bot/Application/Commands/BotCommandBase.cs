@@ -13,7 +13,7 @@ public abstract class BotCommandBase(ILogger logger, IUserSessionStore sessionSt
     public abstract string Name { get; }
 
     public abstract string Description { get; }
-    
+
     protected virtual string MissingCharacterMessage => string.Empty;
 
     public async Task ExecuteAsync(BotCommandContext context, CancellationToken cancellationToken)
@@ -34,19 +34,24 @@ public abstract class BotCommandBase(ILogger logger, IUserSessionStore sessionSt
             return;
         }
 
-        if (MissingCharacterMessage.Length > 0 && (!SessionStore.TryGet(user.Id, out var session) || session.CharacterName is null))
+        if (MissingCharacterMessage.Length > 0)
         {
-            await context.BotClient.SendMessage(
-                context.Message.Chat,
-                MissingCharacterMessage,
-                cancellationToken: cancellationToken);
-            return;
+            var session = await SessionStore.TryGetAsync(user.Id, cancellationToken);
+            if (session?.CharacterName is null)
+            {
+                await context.BotClient.SendMessage(
+                    context.Message.Chat,
+                    MissingCharacterMessage,
+                    cancellationToken: cancellationToken);
+                return;
+            }
         }
 
         await ExecuteCoreAsync(context, user, cancellationToken);
     }
 
-    protected virtual Task<bool> BeforeExecuteAsync(BotCommandContext context, CancellationToken cancellationToken) => Task.FromResult(true);
+    protected virtual Task<bool> BeforeExecuteAsync(BotCommandContext context, CancellationToken cancellationToken) =>
+        Task.FromResult(true);
 
     protected abstract Task ExecuteCoreAsync(
         BotCommandContext context,

@@ -2,13 +2,13 @@ namespace MineTimbermanBot.Application.Sessions;
 
 public interface IUserSessionStore
 {
-    UserSession GetOrCreate(long userId);
+    Task<UserSession> GetOrCreateAsync(long userId, CancellationToken cancellationToken = default);
 
-    bool TryGet(long userId, out UserSession session);
+    Task<UserSession?> TryGetAsync(long userId, CancellationToken cancellationToken = default);
 
-    void RegisterCharacterInChat(long chatId, long userId);
+    Task RegisterCharacterInChatAsync(long chatId, long userId, CancellationToken cancellationToken = default);
 
-    bool IsCharacterInChat(long chatId, long userId);
+    Task<bool> IsCharacterInChatAsync(long chatId, long userId, CancellationToken cancellationToken = default);
 
-    long? TryPickRandomOpponent(long chatId, long excludeUserId, Func<long, bool>? isBusy = null);
+    Task<long?> TryPickRandomOpponentAsync( long chatId, long excludeUserId, Func<long, CancellationToken, Task<bool>>? isBusy = null, CancellationToken cancellationToken = default);
 }

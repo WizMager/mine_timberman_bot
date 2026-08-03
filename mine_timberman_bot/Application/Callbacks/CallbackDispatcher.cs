@@ -44,7 +44,7 @@ public sealed class CallbackDispatcher
             return;
         }
 
-        var session = _sessionStore.GetOrCreate(callback.From.Id);
+        var session = await _sessionStore.GetOrCreateAsync(callback.From.Id, cancellationToken);
         var context = new BotCallbackContext(botClient, callback, session, callback.Data!, payload);
 
         var result = await handler.HandleAsync(context, cancellationToken);

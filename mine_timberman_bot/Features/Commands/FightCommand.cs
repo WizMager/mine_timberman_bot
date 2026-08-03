@@ -39,7 +39,9 @@ public sealed class FightCommand(
     {
         var chat = context.Message.Chat;
 
-        if (!SessionStore.TryGet(user.Id, out var challenger) || challenger.CharacterName is null || !SessionStore.IsCharacterInChat(chat.Id, user.Id))
+        var challenger = await SessionStore.TryGetAsync(user.Id, cancellationToken);
+        if (challenger?.CharacterName is null
+            || !await SessionStore.IsCharacterInChatAsync(chat.Id, user.Id, cancellationToken))
         {
             await context.BotClient.SendMessage(
                 chat,
@@ -48,7 +50,7 @@ public sealed class FightCommand(
             return;
         }
 
-        if (duelStore.FindByUser(user.Id) is not null)
+        if (await duelStore.FindByUserAsync(user.Id, cancellationToken) is not null)
         {
             await context.BotClient.SendMessage(
                 chat,
@@ -57,12 +59,23 @@ public sealed class FightCommand(
             return;
         }
 
-        var opponentId = SessionStore.TryPickRandomOpponent(
+        var opponentId = await SessionStore.TryPickRandomOpponentAsync(
             chat.Id,
             user.Id,
-            busyUserId => duelStore.FindByUser(busyUserId) is not null);
+            async (busyUserId, ct) => await duelStore.FindByUserAsync(busyUserId, ct) is not null,
+            cancellationToken);
 
-        if (opponentId is null || !SessionStore.TryGet(opponentId.Value, out var opponent) || opponent.CharacterName is null)
+        if (opponentId is null)
+        {
+            await context.BotClient.SendMessage(
+                chat,
+                "Некого звать: в этой группе нет других крепилей (или все уже в скрестили болты).",
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        var opponent = await SessionStore.TryGetAsync(opponentId.Value, cancellationToken);
+        if (opponent?.CharacterName is null)
         {
             await context.BotClient.SendMessage(
                 chat,
@@ -83,7 +96,7 @@ public sealed class FightCommand(
             CreatedAt = DateTime.Now
         };
 
-        if (!duelStore.TryCreate(duel))
+        if (!await duelStore.TryCreateAsync(duel, cancellationToken))
         {
             await context.BotClient.SendMessage(
                 chat,
@@ -123,7 +136,7 @@ public sealed class FightCommand(
                 "Failed to start duel {DuelId}: DM delivery failed",
                 duelId);
 
-            duelStore.Remove(duelId);
+            await duelStore.RemoveAsync(duelId, cancellationToken);
 
             if (duel.StatusMessageId != 0)
             {

@@ -9,6 +9,7 @@ public sealed class DuelResolver(
     ITelegramBotClient botClient,
     IUserSessionStore sessionStore,
     IDuelStore duelStore,
+    IUnitOfWork unitOfWork,
     ILogger<DuelResolver> logger)
 {
     public async Task ResolveAsync(Duel duel, CancellationToken cancellationToken)
@@ -18,7 +19,7 @@ public sealed class DuelResolver(
             throw new InvalidOperationException("Cannot resolve duel without both choices.");
         }
 
-        if (!duelStore.Remove(duel.Id))
+        if (!await duelStore.RemoveAsync(duel.Id, cancellationToken))
         {
             return;
         }
@@ -47,29 +48,23 @@ public sealed class DuelResolver(
         var winnerName = comparison > 0 ? duel.ChallengerName : duel.OpponentName;
         var loserName = comparison > 0 ? duel.OpponentName : duel.ChallengerName;
 
-        var winner = sessionStore.GetOrCreate(winnerId);
-        var loser = sessionStore.GetOrCreate(loserId);
+        var winner = await sessionStore.GetOrCreateAsync(winnerId, cancellationToken);
+        var loser = await sessionStore.GetOrCreateAsync(loserId, cancellationToken);
 
-        int stolenBolts;
-        int stolenLogs;
-        lock (winner)
+        winner.Force += 5;
+        var stolenBolts = StealAmount(loser.BoltsInWorkSession);
+        loser.BoltsInWorkSession -= stolenBolts;
+        winner.BoltsInWorkSession += stolenBolts;
+
+        var stolenLogs = 0;
+        if (PassesForceCheck(winner.Force) && loser.LogsInWorkSession > 0)
         {
-            lock (loser)
-            {
-                winner.Force += 5;
-                stolenBolts = StealAmount(loser.BoltsInWorkSession);
-                loser.BoltsInWorkSession -= stolenBolts;
-                winner.BoltsInWorkSession += stolenBolts;
-
-                stolenLogs = 0;
-                if (PassesForceCheck(winner.Force) && loser.LogsInWorkSession > 0)
-                {
-                    stolenLogs = StealAmount(loser.LogsInWorkSession);
-                    loser.LogsInWorkSession -= stolenLogs;
-                    winner.LogsInWorkSession += stolenLogs;
-                }
-            }
+            stolenLogs = StealAmount(loser.LogsInWorkSession);
+            loser.LogsInWorkSession -= stolenLogs;
+            winner.LogsInWorkSession += stolenLogs;
         }
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         var lootLines = new List<string>
         {
@@ -102,7 +97,7 @@ public sealed class DuelResolver(
 
     public async Task CancelAsync(Duel duel, string reason, CancellationToken cancellationToken)
     {
-        if (!duelStore.Remove(duel.Id))
+        if (!await duelStore.RemoveAsync(duel.Id, cancellationToken))
         {
             return;
         }

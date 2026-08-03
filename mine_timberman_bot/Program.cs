@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -11,6 +12,7 @@ using MineTimbermanBot.Application.Sessions;
 using MineTimbermanBot.Configuration;
 using MineTimbermanBot.Features.Callbacks;
 using MineTimbermanBot.Features.Commands;
+using MineTimbermanBot.Infrastructure.Persistence;
 using MineTimbermanBot.Telegram;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
@@ -33,19 +35,20 @@ builder.Services
         "Telegram bot token is missing. Configure TelegramBot:Token.")
     .ValidateOnStart();
 
+var configuredConnection = builder.Configuration.GetConnectionString("Default") ?? "Data Source=data/bot.db";
+var connectionString = ResolveSqliteConnectionString(configuredConnection, builder.Environment.ContentRootPath);
+builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite(connectionString));
 builder.Services.AddSingleton<ITelegramBotClient>(serviceProvider =>
 {
-    var options = serviceProvider
-        .GetRequiredService<IOptions<TelegramBotOptions>>()
-        .Value;
-
+    var options = serviceProvider.GetRequiredService<IOptions<TelegramBotOptions>>().Value;
     return new TelegramBotClient(options.Token);
 });
 
 builder.Services.AddSingleton<IUpdateHandler, TelegramUpdateHandler>();
-builder.Services.AddSingleton<IUserSessionStore, InMemoryUserSessionStore>();
-builder.Services.AddSingleton<IDuelStore, InMemoryDuelStore>();
-builder.Services.AddSingleton<DuelResolver>();
+builder.Services.AddScoped<IUserSessionStore, EfUserSessionStore>();
+builder.Services.AddScoped<IDuelStore, EfDuelStore>();
+builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork>();
+builder.Services.AddScoped<DuelResolver>();
 builder.Services.AddHostedService<TelegramBotWorker>();
 builder.Services.AddHostedService<DuelTimeoutWorker>();
 
@@ -65,4 +68,33 @@ builder.Services.AddScoped<IBotCommand, RenameCommand>();
 
 builder.Services.AddScoped<ICallbackHandler, FightCallbackHandler>();
 
-await builder.Build().RunAsync();
+var host = builder.Build();
+
+await InitializeDatabaseAsync(host.Services);
+
+await host.RunAsync();
+
+static string ResolveSqliteConnectionString(string connectionString, string contentRootPath)
+{
+    var sqlite = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder(connectionString);
+    if (!Path.IsPathRooted(sqlite.DataSource))
+    {
+        sqlite.DataSource = Path.GetFullPath(Path.Combine(contentRootPath, sqlite.DataSource));
+    }
+
+    var directory = Path.GetDirectoryName(sqlite.DataSource);
+    if (!string.IsNullOrWhiteSpace(directory))
+    {
+        Directory.CreateDirectory(directory);
+    }
+
+    return sqlite.ToString();
+}
+
+static async Task InitializeDatabaseAsync(IServiceProvider services)
+{
+    await using var scope = services.CreateAsyncScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await db.Database.MigrateAsync();
+    await db.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
+}

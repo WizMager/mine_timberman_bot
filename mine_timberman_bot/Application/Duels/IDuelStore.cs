@@ -2,13 +2,15 @@ namespace MineTimbermanBot.Application.Duels;
 
 public interface IDuelStore
 {
-    bool TryCreate(Duel duel);
+    Task<bool> TryCreateAsync(Duel duel, CancellationToken cancellationToken = default);
 
-    Duel? Get(string duelId);
+    Task<Duel?> GetAsync(string duelId, CancellationToken cancellationToken = default);
 
-    Duel? FindByUser(long userId);
+    Task<Duel?> FindByUserAsync(long userId, CancellationToken cancellationToken = default);
 
-    IReadOnlyList<Duel> GetAll();
+    Task<IReadOnlyList<Duel>> GetAllAsync(CancellationToken cancellationToken = default);
 
-    bool Remove(string duelId);
+    Task<bool> RemoveAsync(string duelId, CancellationToken cancellationToken = default);
+    
+    Task<Duel?> TrySetChoiceAsync( string duelId, long userId, FightChoice choice, bool auto = false, CancellationToken cancellationToken = default);
 }

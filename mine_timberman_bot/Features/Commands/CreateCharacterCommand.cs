@@ -18,7 +18,7 @@ public class CreateCharacterCommand(
 
     protected override async Task ExecuteCoreAsync(BotCommandContext context, User user, CancellationToken cancellationToken)
     {
-        var userData = SessionStore.GetOrCreate(user.Id);
+        var userData = await SessionStore.GetOrCreateAsync(user.Id, cancellationToken);
         var chat = context.Message.Chat;
 
         if (userData.CharacterName is null)
@@ -30,7 +30,7 @@ public class CreateCharacterCommand(
 
             if (chat.Type is ChatType.Group or ChatType.Supergroup)
             {
-                SessionStore.RegisterCharacterInChat(chat.Id, user.Id);
+                await SessionStore.RegisterCharacterInChatAsync(chat.Id, user.Id, cancellationToken);
             }
 
             await context.BotClient.SendMessage(

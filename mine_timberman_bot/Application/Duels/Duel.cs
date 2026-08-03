@@ -2,19 +2,19 @@ namespace MineTimbermanBot.Application.Duels;
 
 public sealed class Duel
 {
-    public required string Id { get; init; }
+    public string Id { get; set; } = string.Empty;
 
-    public long ChatId { get; init; }
+    public long ChatId { get; set; }
 
     public int StatusMessageId { get; set; }
 
-    public long ChallengerUserId { get; init; }
+    public long ChallengerUserId { get; set; }
 
-    public long OpponentUserId { get; init; }
+    public long OpponentUserId { get; set; }
 
-    public string ChallengerName { get; init; } = string.Empty;
+    public string ChallengerName { get; set; } = string.Empty;
 
-    public string OpponentName { get; init; } = string.Empty;
+    public string OpponentName { get; set; } = string.Empty;
 
     public int? ChallengerDmMessageId { get; set; }
 
@@ -28,9 +28,7 @@ public sealed class Duel
 
     public bool OpponentChoiceAuto { get; set; }
 
-    public DateTime CreatedAt { get; init; } = DateTime.Now;
-
-    public object Sync { get; } = new();
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
 
     public bool IsParticipant(long userId) =>
         userId == ChallengerUserId || userId == OpponentUserId;
