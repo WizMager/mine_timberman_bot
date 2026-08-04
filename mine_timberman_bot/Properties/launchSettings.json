@@ -3,8 +3,10 @@
     "mine_timberman_bot": {
       "commandName": "Project",
       "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
         "DOTNET_ENVIRONMENT": "Development"
-      }
+      },
+      "applicationUrl": "http://localhost:5080"
     }
   }
 }

@@ -16,6 +16,12 @@ public sealed class TelegramBotWorker(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        if (options.Value.UseWebhook)
+        {
+            logger.LogInformation("Webhook mode is enabled; long polling is disabled");
+            return;
+        }
+
         try
         {
             var bot = await botClient.GetMe(stoppingToken);
@@ -25,18 +31,17 @@ public sealed class TelegramBotWorker(
                 bot.Username,
                 bot.Id);
 
-            // Long polling и webhook взаимоисключающие, поэтому снимаем старый webhook.
             await botClient.DeleteWebhook(
                 dropPendingUpdates: false,
                 cancellationToken: stoppingToken);
 
             var receiverOptions = new ReceiverOptions
             {
-                AllowedUpdates = new[]
-                {
+                AllowedUpdates =
+                [
                     UpdateType.Message,
                     UpdateType.CallbackQuery
-                },
+                ],
                 DropPendingUpdates = options.Value.DropPendingUpdates
             };
 
