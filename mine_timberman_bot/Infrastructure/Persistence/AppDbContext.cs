@@ -20,8 +20,6 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.ToTable("Characters");
             entity.HasKey(x => x.UserId);
             entity.Property(x => x.UserId).ValueGeneratedNever();
-            entity.Property(x => x.State).HasMaxLength(32).IsRequired();
-            entity.Property(x => x.SelectedSide).HasMaxLength(32);
             entity.Property(x => x.CharacterName).HasMaxLength(128);
         });
 

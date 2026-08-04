@@ -128,6 +128,8 @@ public sealed class FightCommand(
                 replyMarkup: keyboard,
                 cancellationToken: cancellationToken);
             duel.OpponentDmMessageId = opponentDm.Id;
+
+            await duelStore.SaveAsync(duel, cancellationToken);
         }
         catch (ApiRequestException exception)
         {

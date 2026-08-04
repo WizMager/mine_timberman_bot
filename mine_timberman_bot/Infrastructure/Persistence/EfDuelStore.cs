@@ -52,6 +52,9 @@ public sealed class EfDuelStore(AppDbContext db) : IDuelStore
         return true;
     }
 
+    public Task SaveAsync(Duel duel, CancellationToken cancellationToken = default) =>
+        db.SaveChangesAsync(cancellationToken);
+
     public async Task<Duel?> TrySetChoiceAsync(
         string duelId,
         long userId,
@@ -59,37 +62,47 @@ public sealed class EfDuelStore(AppDbContext db) : IDuelStore
         bool auto = false,
         CancellationToken cancellationToken = default)
     {
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        var updated = await db.Duels
+            .Where(duel =>
+                duel.Id == duelId
+                && duel.ChallengerUserId == userId
+                && duel.ChallengerChoice == null)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(duel => duel.ChallengerChoice, choice)
+                    .SetProperty(duel => duel.ChallengerChoiceAuto, auto),
+                cancellationToken);
 
-        var duel = await db.Duels.FirstOrDefaultAsync(existing => existing.Id == duelId, cancellationToken);
-        if (duel is null || !duel.IsParticipant(userId))
+        if (updated == 0)
+        {
+            updated = await db.Duels
+                .Where(duel =>
+                    duel.Id == duelId
+                    && duel.OpponentUserId == userId
+                    && duel.OpponentChoice == null)
+                .ExecuteUpdateAsync(
+                    setters => setters
+                        .SetProperty(duel => duel.OpponentChoice, choice)
+                        .SetProperty(duel => duel.OpponentChoiceAuto, auto),
+                    cancellationToken);
+        }
+
+        if (updated == 0)
         {
             return null;
         }
 
-        if (userId == duel.ChallengerUserId)
+        DetachTrackedDuels(duelId);
+        return await db.Duels.AsNoTracking().FirstOrDefaultAsync(duel => duel.Id == duelId, cancellationToken);
+    }
+
+    private void DetachTrackedDuels(string duelId)
+    {
+        foreach (var entry in db.ChangeTracker.Entries<Duel>()
+                     .Where(entry => entry.Entity.Id == duelId)
+                     .ToList())
         {
-            if (duel.ChallengerChoice is not null)
-            {
-                return null;
-            }
-
-            duel.ChallengerChoice = choice;
-            duel.ChallengerChoiceAuto = auto;
+            entry.State = EntityState.Detached;
         }
-        else
-        {
-            if (duel.OpponentChoice is not null)
-            {
-                return null;
-            }
-
-            duel.OpponentChoice = choice;
-            duel.OpponentChoiceAuto = auto;
-        }
-
-        await db.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-        return duel;
     }
 }

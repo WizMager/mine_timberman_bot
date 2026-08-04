@@ -16,12 +16,14 @@ public sealed class FightCallbackHandler(IDuelStore duelStore, DuelResolver duel
         }
 
         var userId = context.Callback.From.Id;
+        var callbackMessageId = context.Callback.Message?.Id;
         var duel = await duelStore.TrySetChoiceAsync(parts[0], userId, choice, auto: false, cancellationToken);
         if (duel is null)
         {
             var existing = await duelStore.GetAsync(parts[0], cancellationToken);
             if (existing is null)
             {
+                await duelResolver.RemoveChoiceKeyboardAsync(userId, callbackMessageId, cancellationToken);
                 return new CallbackHandleResult("Этот бой уже закончился.");
             }
 
@@ -30,14 +32,25 @@ public sealed class FightCallbackHandler(IDuelStore duelStore, DuelResolver duel
                 return new CallbackHandleResult("Это не твой бой.");
             }
 
+            var ownDmMessageId = userId == existing.ChallengerUserId
+                ? existing.ChallengerDmMessageId ?? callbackMessageId
+                : existing.OpponentDmMessageId ?? callbackMessageId;
+            await duelResolver.RemoveChoiceKeyboardAsync(userId, ownDmMessageId, cancellationToken);
+
+            if (existing.BothChosen)
+            {
+                await duelResolver.ResolveAsync(existing, cancellationToken);
+                return new CallbackHandleResult("Бой завершён.");
+            }
+
             return new CallbackHandleResult("Ты уже сходил.");
         }
 
-        var ownDmMessageId = userId == duel.ChallengerUserId
-            ? duel.ChallengerDmMessageId
-            : duel.OpponentDmMessageId;
+        var messageId = userId == duel.ChallengerUserId
+            ? duel.ChallengerDmMessageId ?? callbackMessageId
+            : duel.OpponentDmMessageId ?? callbackMessageId;
 
-        await duelResolver.RemoveChoiceKeyboardAsync(userId, ownDmMessageId, cancellationToken);
+        await duelResolver.RemoveChoiceKeyboardAsync(userId, messageId, cancellationToken);
 
         if (duel.BothChosen)
         {

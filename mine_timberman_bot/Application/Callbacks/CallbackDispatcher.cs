@@ -50,11 +50,10 @@ public sealed class CallbackDispatcher
         var result = await handler.HandleAsync(context, cancellationToken);
 
         _logger.LogInformation(
-            "Callback {CallbackData} handled by {Handler} for user {UserId} in state {State}",
+            "Callback {CallbackData} handled by {Handler} for user {UserId}",
             callback.Data,
             handler.GetType().Name,
-            callback.From.Id,
-            session.State);
+            callback.From.Id);
 
         await botClient.AnswerCallbackQuery(
             callback.Id,

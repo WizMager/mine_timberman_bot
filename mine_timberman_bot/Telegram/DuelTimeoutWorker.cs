@@ -18,7 +18,7 @@ public sealed class DuelTimeoutWorker(
         {
             try
             {
-                await ProcessExpiredDuelsAsync(stoppingToken);
+                await ProcessDuelsAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -40,22 +40,30 @@ public sealed class DuelTimeoutWorker(
         }
     }
 
-    private async Task ProcessExpiredDuelsAsync(CancellationToken cancellationToken)
+    private async Task ProcessDuelsAsync(CancellationToken cancellationToken)
     {
         await using var scope = scopeFactory.CreateAsyncScope();
         var duelStore = scope.ServiceProvider.GetRequiredService<IDuelStore>();
         var duelResolver = scope.ServiceProvider.GetRequiredService<DuelResolver>();
 
+        var duels = await duelStore.GetAllAsync(cancellationToken);
         var today = DateTime.Today;
-        var expiredIds = (await duelStore.GetAllAsync(cancellationToken))
-            .Where(duel => duel.CreatedAt.Date < today)
-            .Select(duel => duel.Id)
-            .ToList();
 
-        foreach (var duelId in expiredIds)
+        foreach (var snapshot in duels)
         {
-            var duel = await duelStore.GetAsync(duelId, cancellationToken);
+            var duel = await duelStore.GetAsync(snapshot.Id, cancellationToken);
             if (duel is null)
+            {
+                continue;
+            }
+
+            if (duel.BothChosen)
+            {
+                await duelResolver.ResolveAsync(duel, cancellationToken);
+                continue;
+            }
+
+            if (duel.CreatedAt.Date >= today)
             {
                 continue;
             }
@@ -63,7 +71,7 @@ public sealed class DuelTimeoutWorker(
             if (duel.ChallengerChoice is null)
             {
                 await duelStore.TrySetChoiceAsync(
-                    duelId,
+                    duel.Id,
                     duel.ChallengerUserId,
                     RpsChoiceExtensions.RandomChoice(),
                     auto: true,
@@ -73,14 +81,14 @@ public sealed class DuelTimeoutWorker(
             if (duel.OpponentChoice is null)
             {
                 await duelStore.TrySetChoiceAsync(
-                    duelId,
+                    duel.Id,
                     duel.OpponentUserId,
                     RpsChoiceExtensions.RandomChoice(),
                     auto: true,
                     cancellationToken);
             }
 
-            duel = await duelStore.GetAsync(duelId, cancellationToken);
+            duel = await duelStore.GetAsync(duel.Id, cancellationToken);
             if (duel is { BothChosen: true })
             {
                 await duelResolver.ResolveAsync(duel, cancellationToken);

@@ -11,6 +11,13 @@ public interface IDuelStore
     Task<IReadOnlyList<Duel>> GetAllAsync(CancellationToken cancellationToken = default);
 
     Task<bool> RemoveAsync(string duelId, CancellationToken cancellationToken = default);
-    
-    Task<Duel?> TrySetChoiceAsync( string duelId, long userId, FightChoice choice, bool auto = false, CancellationToken cancellationToken = default);
+
+    Task SaveAsync(Duel duel, CancellationToken cancellationToken = default);
+
+    Task<Duel?> TrySetChoiceAsync(
+        string duelId,
+        long userId,
+        FightChoice choice,
+        bool auto = false,
+        CancellationToken cancellationToken = default);
 }
