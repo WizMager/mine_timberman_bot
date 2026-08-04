@@ -11,6 +11,7 @@ namespace MineTimbermanBot.Telegram;
 public sealed class TelegramBotWorker(
     ITelegramBotClient botClient,
     IUpdateHandler updateHandler,
+    BotIdentity botIdentity,
     IOptions<TelegramBotOptions> options,
     ILogger<TelegramBotWorker> logger) : BackgroundService
 {
@@ -25,6 +26,7 @@ public sealed class TelegramBotWorker(
         try
         {
             var bot = await botClient.GetMe(stoppingToken);
+            botIdentity.SetUsername(bot.Username ?? string.Empty);
 
             logger.LogInformation(
                 "Bot @{Username} ({BotId}) is starting in long polling mode",

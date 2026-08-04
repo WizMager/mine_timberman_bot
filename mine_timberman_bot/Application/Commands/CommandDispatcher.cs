@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using MineTimbermanBot.Telegram;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 
@@ -9,15 +10,16 @@ public sealed class CommandDispatcher
     private static readonly char[] CommandSeparators = [' ', '\t', '\r', '\n'];
 
     private readonly IReadOnlyDictionary<string, IBotCommand> _commands;
+    private readonly BotIdentity _botIdentity;
     private readonly ILogger<CommandDispatcher> _logger;
 
     public CommandDispatcher(
         IEnumerable<IBotCommand> commands,
+        BotIdentity botIdentity,
         ILogger<CommandDispatcher> logger)
     {
-        _commands = commands.ToDictionary(
-            command => NormalizeName(command.Name),
-            StringComparer.OrdinalIgnoreCase);
+        _commands = commands.ToDictionary(command => NormalizeName(command.Name),StringComparer.OrdinalIgnoreCase);
+        _botIdentity = botIdentity;
         _logger = logger;
     }
 
@@ -31,8 +33,18 @@ public sealed class CommandDispatcher
             return;
         }
 
-        if (!TryParseCommand(message.Text, out var commandName, out var arguments))
+        if (!TryParseCommand(message.Text, out var commandName, out var mentionedBotUsername, out var arguments))
         {
+            return;
+        }
+
+        if (!_botIdentity.IsAddressedToThisBot(mentionedBotUsername))
+        {
+            _logger.LogDebug(
+                "Ignoring command /{CommandName} addressed to @{MentionedBot} in chat {ChatId}",
+                commandName,
+                mentionedBotUsername,
+                message.Chat.Id);
             return;
         }
 
@@ -43,10 +55,6 @@ public sealed class CommandDispatcher
                 commandName,
                 message.Chat.Id);
 
-            await botClient.SendMessage(
-                message.Chat,
-                $"Неизвестная команда /{commandName}. Используйте /help.",
-                cancellationToken: cancellationToken);
             return;
         }
 
@@ -69,9 +77,11 @@ public sealed class CommandDispatcher
     private static bool TryParseCommand(
         string text,
         out string commandName,
+        out string? mentionedBotUsername,
         out string arguments)
     {
         commandName = string.Empty;
+        mentionedBotUsername = null;
         arguments = string.Empty;
 
         if (text.Length < 2 || text[0] != '/')
@@ -87,6 +97,7 @@ public sealed class CommandDispatcher
         var mentionIndex = commandToken.IndexOf('@');
         if (mentionIndex >= 0)
         {
+            mentionedBotUsername = commandToken[(mentionIndex + 1)..];
             commandToken = commandToken[..mentionIndex];
         }
 

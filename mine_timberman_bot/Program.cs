@@ -55,6 +55,7 @@ builder.Services
         return new TelegramBotClient(options.Token, httpClient);
     });
 
+builder.Services.AddSingleton<BotIdentity>();
 builder.Services.AddSingleton<IUpdateHandler, TelegramUpdateHandler>();
 builder.Services.AddScoped<IUserSessionStore, EfUserSessionStore>();
 builder.Services.AddScoped<IDuelStore, EfDuelStore>();

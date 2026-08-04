@@ -7,6 +7,7 @@ namespace MineTimbermanBot.Telegram;
 
 public sealed class TelegramWebhookService(
     ITelegramBotClient botClient,
+    BotIdentity botIdentity,
     IOptions<TelegramBotOptions> options,
     ILogger<TelegramWebhookService> logger) : IHostedService
 {
@@ -19,6 +20,7 @@ public sealed class TelegramWebhookService(
         }
 
         var bot = await botClient.GetMe(cancellationToken);
+        botIdentity.SetUsername(bot.Username ?? string.Empty);
 
         logger.LogInformation(
             "Bot @{Username} ({BotId}) is registering webhook {WebhookUrl}",
