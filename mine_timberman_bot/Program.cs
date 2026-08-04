@@ -56,6 +56,7 @@ builder.Services
     });
 
 builder.Services.AddSingleton<BotIdentity>();
+builder.Services.AddHostedService(provider => provider.GetRequiredService<BotIdentity>());
 builder.Services.AddSingleton<IUpdateHandler, TelegramUpdateHandler>();
 builder.Services.AddScoped<IUserSessionStore, EfUserSessionStore>();
 builder.Services.AddScoped<IDuelStore, EfDuelStore>();

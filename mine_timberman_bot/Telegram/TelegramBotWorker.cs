@@ -25,13 +25,9 @@ public sealed class TelegramBotWorker(
 
         try
         {
-            var bot = await botClient.GetMe(stoppingToken);
-            botIdentity.SetUsername(bot.Username ?? string.Empty);
-
             logger.LogInformation(
-                "Bot @{Username} ({BotId}) is starting in long polling mode",
-                bot.Username,
-                bot.Id);
+                "Bot @{Username} is starting in long polling mode",
+                botIdentity.Username);
 
             await botClient.DeleteWebhook(
                 dropPendingUpdates: false,

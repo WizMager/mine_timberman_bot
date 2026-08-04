@@ -18,7 +18,9 @@ public sealed class CommandDispatcher
         BotIdentity botIdentity,
         ILogger<CommandDispatcher> logger)
     {
-        _commands = commands.ToDictionary(command => NormalizeName(command.Name),StringComparer.OrdinalIgnoreCase);
+        _commands = commands.ToDictionary(
+            command => NormalizeName(command.Name),
+            StringComparer.OrdinalIgnoreCase);
         _botIdentity = botIdentity;
         _logger = logger;
     }
@@ -40,21 +42,21 @@ public sealed class CommandDispatcher
 
         if (!_botIdentity.IsAddressedToThisBot(mentionedBotUsername))
         {
-            _logger.LogDebug(
-                "Ignoring command /{CommandName} addressed to @{MentionedBot} in chat {ChatId}",
+            _logger.LogInformation(
+                "Ignoring foreign-targeted command /{CommandName}@{MentionedBot} (our bot @{OurBot}) in chat {ChatId}",
                 commandName,
                 mentionedBotUsername,
+                _botIdentity.Username,
                 message.Chat.Id);
             return;
         }
 
         if (!_commands.TryGetValue(commandName, out var command))
         {
-            _logger.LogInformation(
+            _logger.LogDebug(
                 "Unknown command /{CommandName} received from chat {ChatId}",
                 commandName,
                 message.Chat.Id);
-
             return;
         }
 

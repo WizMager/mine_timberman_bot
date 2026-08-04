@@ -19,13 +19,9 @@ public sealed class TelegramWebhookService(
             return;
         }
 
-        var bot = await botClient.GetMe(cancellationToken);
-        botIdentity.SetUsername(bot.Username ?? string.Empty);
-
         logger.LogInformation(
-            "Bot @{Username} ({BotId}) is registering webhook {WebhookUrl}",
-            bot.Username,
-            bot.Id,
+            "Bot @{Username} is registering webhook {WebhookUrl}",
+            botIdentity.Username,
             botOptions.WebhookUrl);
 
         await botClient.SetWebhook(
