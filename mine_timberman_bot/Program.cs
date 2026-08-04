@@ -42,9 +42,7 @@ builder.Services
         "TelegramBot:SecretToken must be 1-256 characters: A-Z, a-z, 0-9, _, -.")
     .ValidateOnStart();
 
-var connectionString = builder.Configuration.GetConnectionString("Default")
-    ?? throw new InvalidOperationException(
-        "Connection string 'Default' is missing. Configure ConnectionStrings:Default.");
+var connectionString = builder.Configuration.GetConnectionString("Default")?? throw new InvalidOperationException("Connection string 'Default' is missing. Configure ConnectionStrings:Default.");
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 
 builder.Services
