@@ -8,6 +8,7 @@ deploy.ps1
 *.user
 .env
 appsettings.Local.json
+appsettings.Production.json
 **/data/
 *.db
 *.db-shm

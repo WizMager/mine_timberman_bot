@@ -42,9 +42,10 @@ builder.Services
         "TelegramBot:SecretToken must be 1-256 characters: A-Z, a-z, 0-9, _, -.")
     .ValidateOnStart();
 
-var configuredConnection = builder.Configuration.GetConnectionString("Default") ?? "Data Source=data/bot.db";
-var connectionString = ResolveSqliteConnectionString(configuredConnection, builder.Environment.ContentRootPath);
-builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite(connectionString));
+var connectionString = builder.Configuration.GetConnectionString("Default")
+    ?? throw new InvalidOperationException(
+        "Connection string 'Default' is missing. Configure ConnectionStrings:Default.");
+builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 
 builder.Services
     .AddHttpClient("telegram_bot")
@@ -143,27 +144,9 @@ static bool IsValidSecretToken(string secretToken)
     return secretToken.All(static ch => char.IsAsciiLetterOrDigit(ch) || ch is '_' or '-');
 }
 
-static string ResolveSqliteConnectionString(string connectionString, string contentRootPath)
-{
-    var sqlite = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder(connectionString);
-    if (!Path.IsPathRooted(sqlite.DataSource))
-    {
-        sqlite.DataSource = Path.GetFullPath(Path.Combine(contentRootPath, sqlite.DataSource));
-    }
-
-    var directory = Path.GetDirectoryName(sqlite.DataSource);
-    if (!string.IsNullOrWhiteSpace(directory))
-    {
-        Directory.CreateDirectory(directory);
-    }
-
-    return sqlite.ToString();
-}
-
 static async Task InitializeDatabaseAsync(IServiceProvider services)
 {
     await using var scope = services.CreateAsyncScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
-    await db.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
 }

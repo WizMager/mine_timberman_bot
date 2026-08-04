@@ -13,6 +13,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     public DbSet<Duel> Duels => Set<Duel>();
 
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        // Bot uses local DateTime.Now/Today for calendar-day rules; store as wall-clock timestamps.
+        configurationBuilder.Properties<DateTime>().HaveColumnType("timestamp without time zone");
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<UserSession>(entity =>
