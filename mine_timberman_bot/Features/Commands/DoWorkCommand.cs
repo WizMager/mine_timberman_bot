@@ -21,23 +21,23 @@ public class DoWorkCommand(
     {
         var userData = await SessionStore.GetOrCreateAsync(user.Id, cancellationToken);
 
-        if (userData.LastWorkTime.Date == DateTime.Today)
+        if (userData.Force < 15)
         {
             await context.BotClient.SendMessage(
                 context.Message.Chat,
-                "Крепиль и так уже заебался, хочешь угробить его?",
+                $"Крепиль {userData.CharacterName} и так уже заебался, хочешь угробить его?",
                 cancellationToken: cancellationToken);
             return;
         }
 
         var boltCount = Random.Shared.Next(1, 5);
         var logsCount = Random.Shared.Next(1, 2);
-        var isLuckyDay = Random.Shared.Next(100) < userData.Force;
+        var isLuckyDay = Random.Shared.Next(100) < userData.Lucky;
         var resultText = isLuckyDay
-            ? $"Твой крепиль нихуёво работнул и поставил {boltCount} болтов да ещё и въебал стоек {logsCount}!"
-            : $"Твой крепиль работнул и поставил болтов - {boltCount}";
+            ? $"Твой крепиль {userData.CharacterName} нихуёво работнул и поставил {boltCount} болтов да ещё и въебал стоек {logsCount}!"
+            : $"Твой крепиль {userData.CharacterName} работнул и поставил болтов - {boltCount}";
         userData.BoltsInWorkSession += boltCount;
-        userData.LastWorkTime = DateTime.Now;
+        userData.Force -= 15;
 
         if (isLuckyDay)
         {

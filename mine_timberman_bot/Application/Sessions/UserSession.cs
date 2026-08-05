@@ -11,8 +11,8 @@ public sealed class UserSession
     public int LogsInWorkSession { get; set; }
 
     public int Force { get; set; }
-
-    public DateTime LastWorkTime { get; set; }
+    
+    public int Lucky { get; set; }
 
     public DateTime LastRestTime { get; set; }
 }

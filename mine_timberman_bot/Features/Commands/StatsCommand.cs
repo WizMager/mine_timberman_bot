@@ -26,7 +26,8 @@ public class StatsCommand(
             $"Характеристики крепиля с именем {userData.CharacterName} такие:" +
             $"\nУстановлено болтов: {userData.BoltsInWorkSession}" +
             $"\nПоставлено стоек: {userData.LogsInWorkSession}" +
-            $"\nУроень СИЛЫ юного крепиляна: {userData.Force}",
+            $"\nУроень СИЛЫ юного крепиляна: {userData.Force}" +
+            $"\nТвоя удача: {userData.Lucky}",
             cancellationToken: cancellationToken);
     }
 }

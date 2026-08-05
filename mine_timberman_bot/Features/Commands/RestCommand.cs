@@ -15,8 +15,7 @@ public class RestCommand(
 
     public override string Description => "Попытаться дремануть до приезда ИТР";
 
-    protected override string MissingCharacterMessage { get; } =
-        "А кому спать, РМУшники и не просыпались с начала смены? Создай крепиля сразу!";
+    protected override string MissingCharacterMessage => "А кому спать, РМУшники и не просыпались с начала смены? Создай крепиля сразу!";
 
     protected override async Task ExecuteCoreAsync(BotCommandContext context, User user, CancellationToken cancellationToken)
     {
@@ -31,31 +30,26 @@ public class RestCommand(
             return;
         }
 
-        var randomValue = userData.Force == 100 ? Random.Shared.Next(101) : Random.Shared.Next(100);
-        var isLuckyDay = randomValue < userData.Force;
+        var randomValue = userData.Lucky == 100 ? Random.Shared.Next(101) : Random.Shared.Next(100);
+        var isLuckyDay = randomValue < userData.Lucky;
         var resultText = isLuckyDay
-            ? "Тебе удалось кемарнуть, ты чувствуешь силу, юный падаван."
-            : "Тебя разбудил начальник за спиной у которого стоял ТБшник. Возможно тебя ждёт сЭкс...";
+            ? $"Твоему {userData.CharacterName} удалось кемарнуть, ты чувствуешь силу, юный падаван."
+            : $"Твоего {userData.CharacterName} разбудил начальник за спиной у которого стоял ТБшник. Возможно тебя ждёт сЭкс... Хотя ты и успел дремануть";
 
         if (isLuckyDay)
         {
-            userData.Force += 10;
+            userData.Force += 50;
         }
         else
         {
-            userData.Force -= Math.Max(1, userData.Force / 4);
-        }
-
-        if (userData.Force <= 0)
-        {
-            userData.Force = 1;
+            userData.Force += 25;
         }
 
         userData.LastRestTime = DateTime.Today;
 
         await context.BotClient.SendMessage(
             context.Message.Chat,
-            resultText + $"\nТеперь твоя сила равна {userData.Force}%",
+            resultText + $"\nТеперь Cила {userData.CharacterName} равна {userData.Force}",
             cancellationToken: cancellationToken);
     }
 }

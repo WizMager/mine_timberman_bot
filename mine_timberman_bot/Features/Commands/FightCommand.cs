@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using MineTimbermanBot.Application.Commands;
 using MineTimbermanBot.Application.Duels;
 using MineTimbermanBot.Application.Sessions;
@@ -40,21 +39,34 @@ public sealed class FightCommand(
         var chat = context.Message.Chat;
 
         var challenger = await SessionStore.TryGetAsync(user.Id, cancellationToken);
-        if (challenger?.CharacterName is null
-            || !await SessionStore.IsCharacterInChatAsync(chat.Id, user.Id, cancellationToken))
+        if (challenger?.CharacterName is null)
         {
             await context.BotClient.SendMessage(
                 chat,
-                "Без крепиля на бой не ходят. Сначала /create в этой группе.",
+                "Без крепиля на бой не ходят. Сначала /create.",
                 cancellationToken: cancellationToken);
             return;
         }
 
+        if (!await SessionStore.IsCharacterInChatAsync(chat.Id, user.Id, cancellationToken))
+        {
+            await SessionStore.RegisterCharacterInChatAsync(chat.Id, user.Id, cancellationToken);
+        }
+        
         if (await duelStore.FindByUserAsync(user.Id, cancellationToken) is not null)
         {
             await context.BotClient.SendMessage(
                 chat,
                 "Ты уже в бою. Дождись конца дня или хода соперника.",
+                cancellationToken: cancellationToken);
+            return;
+        }
+        
+        if (challenger.Force < 15)
+        {
+            await context.BotClient.SendMessage(
+                chat,
+                $"У твоего {challenger.CharacterName} нету сил поднять бурилку, поднять стойку или держать бензопилу",
                 cancellationToken: cancellationToken);
             return;
         }

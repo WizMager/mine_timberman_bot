@@ -53,6 +53,7 @@ public sealed class EfUserSessionStore(AppDbContext db) : IUserSessionStore
                 character => character.UserId,
                 (_, character) => character)
             .Where(character => character.CharacterName != null)
+            .Where(character => character.Force >= 15)
             .Select(character => character.UserId)
             .ToListAsync(cancellationToken);
 

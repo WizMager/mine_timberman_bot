@@ -51,13 +51,14 @@ public sealed class DuelResolver(
         var winner = await sessionStore.GetOrCreateAsync(winnerId, cancellationToken);
         var loser = await sessionStore.GetOrCreateAsync(loserId, cancellationToken);
 
-        winner.Force += 5;
+        winner.Force -= 15;
+        loser.Force -= 15;
         var stolenBolts = StealAmount(loser.BoltsInWorkSession);
         loser.BoltsInWorkSession -= stolenBolts;
         winner.BoltsInWorkSession += stolenBolts;
 
         var stolenLogs = 0;
-        if (PassesForceCheck(winner.Force) && loser.LogsInWorkSession > 0)
+        if (PassesForceCheck(winner.Lucky) && loser.LogsInWorkSession > 0)
         {
             stolenLogs = StealAmount(loser.LogsInWorkSession);
             loser.LogsInWorkSession -= stolenLogs;
@@ -68,15 +69,15 @@ public sealed class DuelResolver(
 
         var lootLines = new List<string>
         {
-            $"{winnerName} побеждает!",
+            $"{winnerName} побеждает {loser.CharacterName}!",
             $"{duel.ChallengerName}: {challengerChoice.ToRussian()}",
             $"{duel.OpponentName}: {opponentChoice.ToRussian()}",
-            $"+5 силы (теперь {winner.Force}%)"
+            "Оба потратили на возню 15 Силы"
         };
 
         if (stolenBolts > 0)
         {
-            lootLines.Add($"Утянул у {loserName} болтов: {stolenBolts}");
+            lootLines.Add($"{winner.CharacterName} утянул у {loserName} болтов: {stolenBolts}");
         }
 
         if (stolenLogs > 0)
@@ -92,21 +93,6 @@ public sealed class DuelResolver(
         await botClient.SendMessage(
             duel.ChatId,
             string.Join('\n', lootLines),
-            cancellationToken: cancellationToken);
-    }
-
-    public async Task CancelAsync(Duel duel, string reason, CancellationToken cancellationToken)
-    {
-        if (!await duelStore.RemoveAsync(duel.Id, cancellationToken))
-        {
-            return;
-        }
-
-        await CleanupMessagesAsync(duel, cancellationToken);
-
-        await botClient.SendMessage(
-            duel.ChatId,
-            reason,
             cancellationToken: cancellationToken);
     }
 

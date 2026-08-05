@@ -24,9 +24,10 @@ public class CreateCharacterCommand(
         if (userData.CharacterName is null)
         {
             userData.CharacterName = user.Username;
-            userData.BoltsInWorkSession = Random.Shared.Next(1, 5);
+            userData.BoltsInWorkSession = 0;
             userData.LogsInWorkSession = 0;
-            userData.Force = 10;
+            userData.Force = 50;
+            userData.Lucky = 15;
 
             if (chat.Type is ChatType.Group or ChatType.Supergroup)
             {
@@ -35,7 +36,7 @@ public class CreateCharacterCommand(
 
             await context.BotClient.SendMessage(
                 chat,
-                "Ты создал сына маркшейдерши и МГВМ",
+                $"Ты создал сына маркшейдерши и МГВМ {userData.CharacterName}",
                 cancellationToken: cancellationToken);
             return;
         }
